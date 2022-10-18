@@ -1,19 +1,51 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# Node.js
+# Build a general Node.js project with npm.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
 
 trigger:
-- master
+- main
 
 pool:
   vmImage: ubuntu-latest
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+variables:
+  environmentName: "provision-vm-example-0001"
+  token: "aooihka2mcrfnfwgp7xghv6ofsiluxjgerttzp7zz42gdtfzspoa"
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+stages:
+
+- stage: Test
+  dependsOn: Provision
+  condition: succeeded()
+  displayName: Test Stage
+  jobs:
+  - deployment: TestCustomTask
+    displayName: Deploy Web App
+    environment:
+      name: provision-vm-example-0001
+      resourceType: VirtualMachine
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '16.x'
+            displayName: 'Install Node.js'
+          - script: |
+              git clone https://github.com/blue0316/puppeteer-test-project.git
+            displayName: 'git clone'
+            continueOnError: true
+          - task: Npm@1
+            displayName: 'install node packages'
+            inputs:
+              command: 'install'
+              workingDir: 'puppeteer-test-project'
+            continueOnError: true
+          - task: Npm@1
+            displayName: 'start test project'
+            inputs:
+              command: ci
+              workingDir: 'puppeteer-test-project'
+            continueOnError: true
